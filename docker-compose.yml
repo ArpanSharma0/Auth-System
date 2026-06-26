@@ -1,0 +1,29 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: auth-system-app
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    environment:
+      - PORT=3000
+      # If using a local containerized MongoDB, override MONGO_URI
+      # - MONGO_URI=mongodb://mongodb:27017/auth-system
+    depends_on:
+      - mongodb
+
+  mongodb:
+    image: mongo:6.0-jammy
+    container_name: auth-system-db
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+volumes:
+  mongo_data:

@@ -69,6 +69,8 @@ sequenceDiagram
     │   └── database.js       # MongoDB database connection configuration
     ├── controllers
     │   └── auth.controller.js # Logic for login, signup, verification, and logout
+    ├── middlewares
+    │   └── auth.middleware.js # Express middleware for JWT access and refresh token validation
     ├── models
     │   ├── otp.model.js      # Schema for temporal OTP storage
     │   ├── session.model.js  # Schema for tracking active sessions
@@ -132,10 +134,10 @@ npm start
 | **POST** | `/register` | `{ username, email, password }` | Register a new user and trigger verification OTP. | Public |
 | **POST** | `/verify-email` | `{ email, otp }` | Verify OTP code and activate the user account. | Public |
 | **POST** | `/login` | `{ email, password }` | Authenticate credentials. Creates session, returns Access Token, and sets Refresh Token cookie. | Public |
-| **GET** | `/get-me` | *Authorization Header (Bearer token)* | Retrieve the active user's details. | Protected (Access Token) |
-| **GET** | `/refresh-token` | *Refresh Token Cookie* | Validate session and issue a new pair of Access & Refresh tokens. | Session Owner |
-| **GET** | `/logout` | *Refresh Token Cookie* | Revokes current session and clears the Refresh Token cookie. | Session Owner |
-| **GET** | `/logout-all` | *Refresh Token Cookie* | Revokes all active sessions across all devices for the user. | Session Owner |
+| **GET** | `/get-me` | *Authorization Header (Bearer token)* | Retrieve the active user's details. | Protected (`requireAccessToken` middleware) |
+| **GET** | `/refresh-token` | *Refresh Token Cookie* | Validate session and issue a new pair of Access & Refresh tokens. | Protected (`requireRefreshToken` middleware) |
+| **GET** | `/logout` | *Refresh Token Cookie* | Revokes current session and clears the Refresh Token cookie. | Protected (`requireRefreshToken` middleware) |
+| **GET** | `/logout-all` | *Refresh Token Cookie* | Revokes all active sessions across all devices for the user. | Protected (`requireRefreshToken` middleware) |
 
 ---
 
