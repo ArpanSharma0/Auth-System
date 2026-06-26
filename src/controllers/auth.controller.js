@@ -127,58 +127,22 @@ export async function login(req, res) {
 }
 
 export async function getMe(req, res) {
-
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) {
-        return res.status(401).json({
-            success: false,
-            message: "Token not found"
-        })
-    }
-    const decoded = jwt.verify(token, config.JWT_SECRET);
-
-    const user = await userModel.findById(decoded.id)
-
     res.status(200).json({
         success: true,
         message: "user fetched successfully",
         user: {
-            username: user.username,
-            email: user.email
+            username: req.user.username,
+            email: req.user.email
         }
     })
-
 }
 
 export async function refreshToken(req, res) {
-    const refreshToken = req.cookies.refreshToken;
-
-    if (!refreshToken) {
-        return res.status(401).json({
-            success: false,
-            message: "Refresh token not found"
-        })
-    }
-
-    const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
-
-    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-
-    const session = await sessionModel.findOne({
-        refreshToken: refreshTokenHash,
-        revoked: false
-    })
-
-    if (!session) {
-        return res.status(401).json({
-            success: false,
-            message: "Invalid session or session already revoked"
-        })
-    }
+    const { userId, session } = req;
 
     const accessToken = jwt.sign(
         {
-            id: decoded.id
+            id: userId
         },
         config.JWT_SECRET,
         {
@@ -187,7 +151,7 @@ export async function refreshToken(req, res) {
     )
 
     const newRefreshToken = jwt.sign(
-        { id: decoded.id },
+        { id: userId },
         config.JWT_SECRET,
         { expiresIn: "7d" }
     )
@@ -201,15 +165,7 @@ export async function refreshToken(req, res) {
         httpOnly: true,
         secure: true,
         sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
-    })
-
-
-    res.cookie("refreshToken", newRefreshToken, {
-        httpOnly: true,
-        secure: true,
-        sameSite: "strict",
-        maxAge: 7 * 24 * 60 * 60 * 1000
+        maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
     })
 
     res.status(200).json({
@@ -220,27 +176,7 @@ export async function refreshToken(req, res) {
 }
 
 export async function logout(req, res) {
-    const refreshToken = req.cookies.refreshToken;
-
-    if (!refreshToken) {
-        return res.status(400).json({
-            success: false,
-            message: "Refresh token not found"
-        })
-    }
-    const refreshTokenHash = crypto.createHash("sha256").update(refreshToken).digest("hex");
-
-    const session = await sessionModel.findOne({
-        refreshToken: refreshTokenHash,
-        revoked: false
-    })
-
-    if (!session) {
-        return res.status(400).json({
-            success: false,
-            message: "Invalid session or session already revoked"
-        })
-    }
+    const { session } = req;
 
     session.revoked = true;
     await session.save();
@@ -254,20 +190,8 @@ export async function logout(req, res) {
 }
 
 export async function logoutAll(req, res) {
-
-    const refreshToken = req.cookies.refreshToken;
-
-    if (!refreshToken) {
-        return res.status(401).json({
-            success: false,
-            message: "Refresh token not found"
-        })
-    }
-
-    const decoded = jwt.verify(refreshToken, config.JWT_SECRET);
-
     await sessionModel.updateMany({
-        user: decoded.id,
+        user: req.userId,
         revoked: false
     }, {
         revoked: true
